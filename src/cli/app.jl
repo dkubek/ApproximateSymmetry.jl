@@ -1,8 +1,3 @@
-module CLI
-
-using ArgParse
-using ..ApproximateSymmetry
-
 """
     parse_commandline()
 
@@ -71,20 +66,13 @@ Get a dataset of the specified type.
 function get_dataset(dataset_type::String, path::String, graph_type::Union{String,Nothing})
     # Get the dataset type as a Julia type
     dataset_type_sym = Symbol(dataset_type)
-    if !isdefined(ApproximateSymmetry, dataset_type_sym)
-        error("Unknown dataset type: $dataset_type")
-    end
 
-    dataset_type_julia = getfield(ApproximateSymmetry, dataset_type_sym)
-
-    # Read the dataset
+    # For NPZ datasets, we need a graph type
     if dataset_type == "NPZDataset" && graph_type !== nothing
-        # For NPZ datasets, we need a graph type
-        dataset = NPZDataset(path, graph_type)
-        return dataset
+        return NPZDataset(path, graph_type)
     else
         # For other dataset types, use the generic read_dataset function
-        datasets = read_dataset(dataset_type_julia, path)
+        datasets = read_dataset(getfield(Main.ApproximateSymmetry, dataset_type_sym), path)
         if isa(datasets, Dict) && !isempty(datasets)
             # If we got a dictionary of datasets, return the first one
             return first(values(datasets))
@@ -100,20 +88,13 @@ end
 Get a method of the specified type with the given parameters.
 """
 function get_method(method_type::String, parameters::Vector{String})
-    # Get the method type as a Julia type
-    method_type_sym = Symbol(method_type)
-    if !isdefined(ApproximateSymmetry, method_type_sym)
-        error("Unknown method type: $method_type")
-    end
-
     # Create a method of the specified type
     if method_type == "SimpleMethod"
         # For SimpleMethod, we need a solver function
         method = SimpleMethod(method_type, "v1", identity)
     else
         # For other method types, assume a constructor without arguments
-        method_type_julia = getfield(ApproximateSymmetry, method_type_sym)
-        method = method_type_julia()
+        method = getfield(Main.ApproximateSymmetry, Symbol(method_type))()
     end
 
     # Set parameters
@@ -145,14 +126,12 @@ end
 Get an output format of the specified type.
 """
 function get_output_format(format_type::String)
-    # Get the format type as a Julia type
-    format_type_sym = Symbol(format_type)
-    if !isdefined(ApproximateSymmetry, format_type_sym)
-        error("Unknown output format type: $format_type")
+    # Get the format type
+    if format_type == "CSVOutputFormat"
+        return CSVOutputFormat()
+    else
+        return getfield(Main.ApproximateSymmetry, Symbol(format_type))()
     end
-
-    format_type_julia = getfield(ApproximateSymmetry, format_type_sym)
-    return format_type_julia()
 end
 
 """
@@ -219,7 +198,3 @@ function main()
         exit(1)
     end
 end
-
-end # module CLI
-
-export CLI

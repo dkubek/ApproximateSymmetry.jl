@@ -1,3 +1,5 @@
+using ..Datasets: NPZDataset
+
 """
     read_dataset(::Type{NPZDataset}, path::String; recursive=true)
 

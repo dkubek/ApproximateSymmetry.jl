@@ -100,7 +100,3 @@ function solve(method::SimpleMethod, instance::MatrixInstance)
 
     return solution
 end
-
-# Export method-related functions and types
-export solve, supported_metrics, SimpleMethod,
-    set_parameter!, get_parameter, add_supported_metric!
