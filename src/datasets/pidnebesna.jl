@@ -131,7 +131,7 @@ function iterate_instances(dataset::NPZDataset)
             instances = dataset[base_name]
 
             for (sim_idx, instance) in enumerate(instances)
-                put!(channel, (base_name, sim_idx - 1, instance))
+                put!(channel, instance)
             end
         end
     end

@@ -1,25 +1,25 @@
 """
-    MatrixInstance <: AbstractInstance
+    MatrixInstance{T} <: AbstractInstance
 
-Represents a matrix-based problem instance.
+Represents a matrix-based problem instance with type-stable matrix elements.
 
 # Fields
 - `id::String`: Unique identifier for the instance
-- `matrix::Matrix`: The matrix data
+- `matrix::Matrix{T}`: The matrix data with elements of type T
 - `metadata::Dict`: Additional instance metadata
 """
-struct MatrixInstance <: AbstractInstance
+struct MatrixInstance{T} <: AbstractInstance
     id::String
-    matrix::Matrix
+    matrix::Matrix{T}
     metadata::Dict{Symbol,Any}
 end
 
 """
-    MatrixInstance(id::String, matrix::Matrix)
+    MatrixInstance(id::String, matrix::Matrix{T}) where {T}
 
 Construct a matrix instance with the given ID and matrix data.
 """
-MatrixInstance(id::String, matrix::Matrix) = MatrixInstance(id, matrix, Dict{Symbol,Any}())
+MatrixInstance(id::String, matrix::Matrix{T}) where {T} = MatrixInstance{T}(id, matrix, Dict{Symbol,Any}())
 
 """
     Base.size(instance::MatrixInstance)

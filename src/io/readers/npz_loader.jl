@@ -1,4 +1,30 @@
 """
+    read_dataset(::Type{NPZDataset}, path::String; recursive=true)
+
+Read an NPZ dataset from a directory structure.
+Returns a dictionary of NPZDataset objects keyed by graph type.
+"""
+function read_dataset(::Type{NPZDataset}, path::String; recursive=true)
+        datasets = Dict{String,NPZDataset}()
+
+        if !isdir(path)
+                error("Dataset directory does not exist: $path")
+        end
+
+        # Find all graph type directories
+        dir_entries = readdir(path, join=true)
+        graph_dirs = filter(isdir, dir_entries)
+
+        # Create a dataset for each graph type
+        for graph_dir in graph_dirs
+                graph_type = basename(graph_dir)
+                datasets[graph_type] = NPZDataset(path, graph_type)
+        end
+
+        return datasets
+end
+
+"""
     load_instance(path::String; sim_idx=nothing)
 
 Load an instance from an NPZ file.
