@@ -1,6 +1,4 @@
 """
-    NPZDataset <: AbstractDataset
-
 A dataset implementation for NPZ files containing matrices.
 
 # Fields
@@ -11,14 +9,11 @@ A dataset implementation for NPZ files containing matrices.
 """
 struct NPZDataset <: AbstractDataset
     path::String
-    graph_type::String
     instances::Dict{String,Vector{MatrixInstance}}
     metadata::Dict{Symbol,Any}
 end
 
 """
-    NPZDataset(path::String, graph_type::String)
-
 Construct a new NPZ dataset from the specified path and graph type.
 """
 function NPZDataset(path::String, graph_type::String)
@@ -26,8 +21,6 @@ function NPZDataset(path::String, graph_type::String)
 end
 
 """
-    Base.getindex(dataset::NPZDataset, base_name::String)
-
 Get all instances for a particular base name.
 """
 function Base.getindex(dataset::NPZDataset, base_name::String)
@@ -39,8 +32,6 @@ function Base.getindex(dataset::NPZDataset, base_name::String)
 end
 
 """
-    Base.getindex(dataset::NPZDataset, base_name::String, sim_idx::Int)
-
 Get a specific simulation instance.
 """
 function Base.getindex(dataset::NPZDataset, base_name::String, sim_idx::Int)
@@ -49,8 +40,6 @@ function Base.getindex(dataset::NPZDataset, base_name::String, sim_idx::Int)
 end
 
 """
-    _load_base_instances(dataset::NPZDataset, base_name::String)
-
 Internal method to load all simulation instances for a base name.
 """
 function _load_base_instances(dataset::NPZDataset, base_name::String)
@@ -130,7 +119,7 @@ function iterate_instances(dataset::NPZDataset)
             base_name = replace(basename(file_path), r"\.npz$" => "")
             instances = dataset[base_name]
 
-            for (sim_idx, instance) in enumerate(instances)
+            for instance in instances
                 put!(channel, instance)
             end
         end

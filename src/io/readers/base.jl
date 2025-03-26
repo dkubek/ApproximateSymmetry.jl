@@ -1,6 +1,4 @@
 """
-    read_dataset(::Type{T}, path::String; kwargs...) where T <: AbstractDataset
-
 Read a dataset of the specified type from the given path.
 Returns a dataset object of the requested type.
 """
@@ -9,8 +7,6 @@ function read_dataset(::Type{T}, path::String; kwargs...) where {T<:AbstractData
 end
 
 """
-    read_solution(::Type{Solution}, path::String, format::AbstractOutputFormat; kwargs...)
-
 Read a solution from the given path using the specified format.
 """
 function read_solution(path::String, format::AbstractOutputFormat, ::Type{Solution}; kwargs...)

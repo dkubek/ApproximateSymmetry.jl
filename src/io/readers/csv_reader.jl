@@ -1,6 +1,4 @@
 """
-    read_solution(::Type{Solution}, path::String, format::CSVOutputFormat; kwargs...)
-
 Read a solution from a CSV file created with CSVOutputFormat.
 """
 function read_solution(path::String, ::CSVOutputFormat, ::Type{Solution}; kwargs...)

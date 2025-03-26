@@ -1,12 +1,4 @@
 """
-    AbstractSolution
-
-Abstract type for solution objects returned by methods.
-Solutions contain the actual result and any associated metrics.
-"""
-abstract type AbstractSolution end
-
-"""
     Solution{T} <: AbstractSolution
 
 Concrete implementation of AbstractSolution.
@@ -65,16 +57,6 @@ Get all metrics from the solution.
 """
 get_metrics(solution::Solution) = solution.metrics
 
-"""
-    supported_metrics(method::AbstractMethod)
-
-Return a vector of symbols representing metrics this method can compute.
-"""
-function supported_metrics(method::AbstractMethod)
-    return Symbol[]  # Default implementation returns no metrics
-end
-
 # Export the solution types and functions
-export AbstractSolution, Solution,
-    get_result, get_metric, has_metric, set_metric!, get_metrics, supported_metrics
+export Solution, get_result, get_metric, has_metric, set_metric!, get_metrics
 

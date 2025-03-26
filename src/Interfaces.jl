@@ -2,15 +2,16 @@ module Interfaces
 
 using LinearAlgebra
 
-# Exports
-export AbstractInstance, AbstractDataset, AbstractMethod, AbstractMetric,
-        AbstractOutputFormat, MatrixInstance,
-        AbstractSolution, Solution,
-        get_result, get_metric, has_metric, set_metric!, get_metrics, supported_metrics
+include("interfaces/instance/base.jl")
+include("interfaces/instance/matrix_instance.jl")
 
-# Include implementation files
-include("interfaces/abstractions.jl")
-include("interfaces/instances.jl")
-include("interfaces/solutions.jl")
+include("interfaces/method.jl")
+
+include("interfaces/output_format.jl")
+
+include("interfaces/solution/base.jl")
+include("interfaces/solution/solution.jl")
+
+include("interfaces/dataset.jl")
 
 end # module
