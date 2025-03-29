@@ -1,21 +1,23 @@
 """
 Represents a matrix-based problem instance with type-stable matrix elements.
-
-# Fields
-- `id::String`: Unique identifier for the instance
-- `matrix::Matrix{T}`: The matrix data with elements of type T
-- `metadata::Dict`: Additional instance metadata
 """
 struct MatrixInstance{T} <: AbstractInstance
     id::String
     matrix::Matrix{T}
-    metadata::Dict{Symbol,Any}
+
+    n::Int
+    path::String
 end
 
 """
 Construct a matrix instance with the given ID and matrix data.
 """
-MatrixInstance(id::String, matrix::Matrix{T}) where {T} = MatrixInstance{T}(id, matrix, Dict{Symbol,Any}())
+function MatrixInstance(id::String, matrix::Matrix{T}) where {T}
+    (n, m) = size(matrix)
+    m == n || throw("Matrix must be square!")
+
+    MatrixInstance{T}(id, matrix, n, "")
+end
 
 """
 Return the size of the matrix in the instance.
@@ -32,19 +34,7 @@ Access the underlying matrix with the given indices.
 """
 Base.getindex(instance::MatrixInstance, indices...) = getindex(instance.matrix, indices...)
 
-"""
-Retrieve metadata from the instance with an optional default value.
-"""
-function get_metadata(instance::MatrixInstance, key::Symbol, default=nothing)
-    get(instance.metadata, key, default)
-end
 
-"""
-Set metadata for the instance.
-"""
-function set_metadata!(instance::MatrixInstance, key::Symbol, value)
-    instance.metadata[key] = value
-    return instance
-end
+adjacency(instance::MatrixInstance) = instance.matrix
 
-export MatrixInstance, get_metadata, set_metadata!
+export MatrixInstance

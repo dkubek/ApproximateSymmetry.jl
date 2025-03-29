@@ -6,4 +6,8 @@ An instance represents a single problem to be solved.
 """
 abstract type AbstractInstance end
 
-export AbstractInstance
+function adjacency(instance::AbstractInstance)
+    error("adjacency not implemented for format type $(typeof(instance))")
+end
+
+export AbstractInstance, adjacency

@@ -8,7 +8,7 @@ Concrete implementation of AbstractSolution.
 - `metrics::Dict{Symbol,Any}`: Dictionary of metrics computed during solving
 """
 struct Solution{T} <: AbstractSolution
-    result::T
+    result::Matrix{T}
     metrics::Dict{Symbol,Any}
 end
 
@@ -17,7 +17,7 @@ end
 
 Construct a solution with the given result and empty metrics.
 """
-Solution(result::T) where {T} = Solution{T}(result, Dict{Symbol,Any}())
+Solution(result::Matrix{T}) where {T} = Solution{T}(result, Dict{Symbol,Any}())
 
 """
     get_result(solution::Solution)

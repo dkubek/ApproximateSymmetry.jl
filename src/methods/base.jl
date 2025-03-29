@@ -100,3 +100,5 @@ function solve(method::SimpleMethod, instance::MatrixInstance)
 
     return solution
 end
+
+export solve
