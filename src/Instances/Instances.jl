@@ -1,3 +1,7 @@
+module Instances
+
+using ..Common
+
 """
     AbstractInstance
 
@@ -7,7 +11,12 @@ An instance represents a single problem to be solved.
 abstract type AbstractInstance end
 
 function adjacency(instance::AbstractInstance)
-    error("adjacency not implemented for format type $(typeof(instance))")
+    error("adjacency not implemented for $(typeof(instance))")
 end
 
 export AbstractInstance, adjacency
+
+include("matrix_instance.jl")
+include("multiple_simulation_instance.jl")
+
+end # module

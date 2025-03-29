@@ -2,20 +2,30 @@ module ApproximateSymmetry
 
 using Reexport
 
-include("Interfaces.jl")
-@reexport using .Interfaces
+include("Common/Common.jl")
+@reexport using .Common
 
-include("Methods.jl")
+include("Instances/Instances.jl")
+@reexport using .Instances
+
+include("Solutions/Solutions.jl")
+@reexport using .Solutions
+
+include("Methods/Methods.jl")
 @reexport using .Methods
 
-include("IO.jl")
-@reexport using .IO
-
-include("Datasets.jl")
+include("Datasets/Datasets.jl")
 @reexport using .Datasets
 
-include("CLI.jl")
+include("CLI/CLI.jl")
 using .CLI
-export CLI
+
+# Convenience re-exports
+export solve, adjacency, process_dataset
+
+# CLI entry point
+function main()
+    CLI.main()
+end
 
 end # module
