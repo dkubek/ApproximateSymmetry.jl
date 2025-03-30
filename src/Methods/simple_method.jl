@@ -6,11 +6,11 @@ end
 
 SimpleMethod(name::String, version::String) = SimpleMethod(name, version, MethodParameters())
 
-function supported_metrics(method::SimpleMethod)
+function supported_metrics(::SimpleMethod)
     return Symbol[:time, :s_metric]
 end
 
-function solve(method::SimpleMethod, instance::Instances.MatrixInstance{T}) where {T<:Real}
+function solve(::SimpleMethod, instance::Instances.MatrixInstance{T}) where {T<:Real}
     n = instance.n
 
     start_time = time()

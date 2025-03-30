@@ -1,8 +1,8 @@
-using Distributed
 using ProgressMeter
 using DelimitedFiles
 using CSV
 using DataFrames
+using Base.Threads: @spawn
 
 """
     ComputeTask
@@ -59,16 +59,16 @@ end
 """
     TaskChannel
 
-Type alias for a remote channel of compute tasks with optional sentinel values.
+Type alias for a channel of compute tasks with optional sentinel values.
 """
-const TaskChannel = RemoteChannel{Channel{Union{ComputeTask, Nothing}}}
+const TaskChannel = Channel{Union{ComputeTask, Nothing}}
 
 """
     SolutionChannel
 
-Type alias for a remote channel of solution results with optional sentinel values.
+Type alias for a channel of solution results with optional sentinel values.
 """
-const SolutionChannel = RemoteChannel{Channel{Union{SolutionResult, Nothing}}}
+const SolutionChannel = Channel{Union{SolutionResult, Nothing}}
 
 """
     OutputCollection
@@ -80,19 +80,19 @@ const OutputCollection = Vector{OutputFiles}
 """
     create_task_channel(buffer_size::Int=32) -> TaskChannel
 
-Create a new remote channel for compute tasks with the specified buffer size.
+Create a new channel for compute tasks with the specified buffer size.
 """
 function create_task_channel(buffer_size::Int=32)::TaskChannel
-    return RemoteChannel(() -> Channel{Union{ComputeTask, Nothing}}(buffer_size))
+    return Channel{Union{ComputeTask, Nothing}}(buffer_size)
 end
 
 """
     create_solution_channel(buffer_size::Int=32) -> SolutionChannel
 
-Create a new remote channel for solution results with the specified buffer size.
+Create a new channel for solution results with the specified buffer size.
 """
 function create_solution_channel(buffer_size::Int=32)::SolutionChannel
-    return RemoteChannel(() -> Channel{Union{SolutionResult, Nothing}}(buffer_size))
+    return Channel{Union{SolutionResult, Nothing}}(buffer_size)
 end
 
 """
@@ -110,7 +110,8 @@ function produce_tasks(
     dataset::AbstractDataset, 
     task_channel::TaskChannel, 
     num_runs::Int,
-    all_instances::Vector{<:AbstractInstance}
+    all_instances::Vector{<:AbstractInstance},
+    num_threads::Int
 ) :: Nothing
     try
         # Generate all instance/run pairs as tasks
@@ -121,8 +122,8 @@ function produce_tasks(
             end
         end
     finally
-        # Signal end of tasks with sentinel values (one per worker)
-        for _ in 1:length(workers())
+        # Signal end of tasks with sentinel values (one per thread)
+        for _ in 1:num_threads
             put!(task_channel, nothing)  # Sentinel value
         end
     end
@@ -195,17 +196,14 @@ function consume_tasks(
                 # Put solution in channel
                 put!(solution_channel, result)
                 
-                # Update progress
+                # Update progress - must lock for thread safety
                 next!(progress)
             catch e
                 @error "Error computing solution" instance=task.instance.id run=task.run_index exception=(e, catch_backtrace())
             end
         end
     finally
-        # If this is the last worker to finish, send sentinel to solution channel
-        # if isempty(task_channel)
-        #     put!(solution_channel, nothing)  # Sentinel value
-        # end
+        # No longer need to check if channel is empty since we're using sentinel values
     end
     return nothing
 end
@@ -223,23 +221,22 @@ writes them to disk, and returns a collection of output file paths.
 function consume_solutions(
     solution_channel::SolutionChannel,
     output_dir::String,
-    progress::Progress
+    progress::Progress,
+    expected_solutions::Int
 ) :: OutputCollection
     output_files = OutputCollection()
+    solutions_processed = 0
     
     try
-        # Process solutions until we receive a sentinel value
-        while true
+        # Process solutions until we receive all expected solutions
+        while solutions_processed < expected_solutions
             # Get next solution result
-            result_or_sentinel = take!(solution_channel)
+            result = take!(solution_channel)
             
-            # Check for sentinel value
-            if result_or_sentinel === nothing
-                break
+            # Skip sentinel values (should not happen with proper counting)
+            if result === nothing
+                continue
             end
-            
-            # Unpack result
-            result = result_or_sentinel::SolutionResult
             
             try
                 # Write solution to disk
@@ -248,6 +245,7 @@ function consume_solutions(
                 
                 # Update progress
                 next!(progress)
+                solutions_processed += 1
             catch e
                 @error "Error writing solution" instance_id=result.instance_id run=result.run_index exception=(e, catch_backtrace())
             end
@@ -305,11 +303,6 @@ function write_metrics(
     all_metrics = []
     for (i, solution) in enumerate(solutions)
         solution_metrics = get_metrics(solution)
-        # Add a run identifier to each metric
-        # metrics_with_run = Dict{Symbol, Any}(:run => i)
-        # for (metric, value) in solution_metrics
-        #     metrics_with_run[metric] = value
-        # end
         push!(all_metrics, solution_metrics)
     end
 
@@ -341,10 +334,8 @@ function write_permutation(
     end
 
     data = reduce(hcat, permutations)
-    # headers = ["run$i" for i in eachindex(permutations)]
 
     open(filename, "w") do io
-        # writedlm(io, [headers], ',')  
         writedlm(io, data, ',')
     end
     
@@ -363,7 +354,7 @@ end
     ) -> OutputCollection
 
 Process all instances in a dataset using the specified method and save results.
-Uses a distributed producer/consumer architecture for efficient parallel processing.
+Uses multi-threading for efficient parallel processing.
 
 # Arguments
 - `dataset`: The dataset containing instances to process
@@ -373,6 +364,7 @@ Uses a distributed producer/consumer architecture for efficient parallel process
 - `force_recompute`: Whether to recompute solutions that already exist
 - `task_buffer_size`: Size of the task channel buffer
 - `solution_buffer_size`: Size of the solution channel buffer
+- `num_threads`: Number of worker threads to use (default: automatically determined)
 
 # Returns
 - Collection of output file paths for all written solutions
@@ -384,8 +376,10 @@ function process_dataset(
     num_runs::Int=5, 
     force_recompute::Bool=false,
     task_buffer_size::Int=32,
-    solution_buffer_size::Int=32
+    solution_buffer_size::Int=32,
+    num_threads::Int = optimal_thread_count()
 ) :: OutputCollection
+
     # Ensure output directory exists
     mkpath(output_dir)
     
@@ -410,13 +404,14 @@ function process_dataset(
     # Calculate total tasks for progress reporting
     total_tasks = length(all_instances) * num_runs
     
-    # Create progress meters
+    # Create progress meters with thread-safe settings
     task_progress = Progress(
         total_tasks, 
         desc="Computing solutions: ", 
         barglyphs=BarGlyphs("[=> ]"),
         barlen=50,
         offset=0,
+        dt=0.2,  # Slower update rate to reduce thread contention
     )
     
     solution_progress = Progress(
@@ -425,30 +420,30 @@ function process_dataset(
         barglyphs=BarGlyphs("[=> ]"),
         barlen=50,
         offset=1,
+        dt=0.2,  # Slower update rate to reduce thread contention
     )
     
-    # Start the solution consumer (runs on main process)
-    solution_consumer_task = @async consume_solutions(solution_channel, output_dir, solution_progress)
+    # Start task producer (runs in its own task)
+    producer_task = @spawn produce_tasks(dataset, task_channel, num_runs, all_instances, num_threads)
     
-    # Start task consumers on worker processes
-    worker_tasks = []
-    for worker in workers()
-        task = remotecall(consume_tasks, worker, task_channel, solution_channel, method, task_progress)
-        push!(worker_tasks, task)
+    # Start the solution consumer (runs in its own task)
+    solution_consumer_task = @spawn consume_solutions(solution_channel, output_dir, solution_progress, total_tasks)
+    
+    # Start worker threads
+    worker_tasks = Vector{Task}(undef, num_threads)
+    for i in 1:num_threads
+        worker_tasks[i] = @spawn consume_tasks(task_channel, solution_channel, method, task_progress)
     end
     
-    # Produce tasks (runs on main process)
-    produce_tasks(dataset, task_channel, num_runs, all_instances)
+    # Wait for producer to finish
+    wait(producer_task)
     
     # Wait for all worker tasks to complete
     for t in worker_tasks
-        fetch(t)
+        wait(t)
     end
     
-    # Signal end of solutions AFTER all workers are done
-    put!(solution_channel, nothing)
-    
-    # Wait for solution consumer to finish
+    # Get the results from the solution consumer
     output_files = fetch(solution_consumer_task)
 
     ProgressMeter.finish!(task_progress)
@@ -481,14 +476,20 @@ function create_summary_files(
     instance_data = Dict{String, Vector{Any}}()
     metrics_data = DataFrame()
     for output_file in output_files
+        graph_name = basename(dirname(dirname(output_file.metrics_file)))
+        graph_names = get!(instance_data, "graph", String[])
+        push!(graph_names, graph_name)
+
         basename_parts = split(basename(output_file.metrics_file), "_")
         for (property, type) in extract_properties
             property_index = findfirst(startswith(property), basename_parts)
-            str_value = chopprefix(basename_parts[property_index], property)
-            value = parse(type, str_value)
+            if property_index !== nothing
+                str_value = chopprefix(basename_parts[property_index], property)
+                value = parse(type, str_value)
 
-            values = get!(instance_data, property, type[])
-            append!(values, value)
+                values = get!(instance_data, property, type[])
+                push!(values, value)
+            end
         end
 
         metrics = CSV.read(output_file.metrics_file, DataFrame)
@@ -496,7 +497,6 @@ function create_summary_files(
     end
 
     df = hcat(DataFrame(instance_data), metrics_data)
-    println(df)
 
     summary_file = joinpath(output_dir, method.name, method.version, "summary.csv")
     CSV.write(summary_file, df)
@@ -504,6 +504,20 @@ function create_summary_files(
     return summary_file
 end
 
+function optimal_thread_count()
+    total_threads = Threads.nthreads()
+    println("Setting threads to $total_threads")
+    
+    # For small systems, use all available threads 
+    # if total_threads <= 4
+    #     return total_threads
+    # end
+    
+    # For larger systems, leave at least one thread for the main tasks
+    # and ensure we don't use too many threads for coordination overhead
+    # return max(2, min(total_threads - 1, 16))
+    return total_threads
+end
 
 export process_dataset, write_solution, write_metrics, write_permutation,
        ComputeTask, SolutionResult, OutputFiles

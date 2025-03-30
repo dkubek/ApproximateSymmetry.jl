@@ -25,7 +25,7 @@ export solve, adjacency, process_dataset
 
 # CLI entry point
 function main()
-    CLI.main()
+	CLI.main()
 end
 
 end # module

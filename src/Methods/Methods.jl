@@ -35,7 +35,10 @@ function supported_metrics(method::AbstractMethod)
     return Symbol[:time]
 end
 
+include("objective_function.jl")
+
 include("simple_method.jl")
+include("irwin_hall.jl")
 
 export AbstractMethod, MethodParameters, solve, supported_metrics
 
