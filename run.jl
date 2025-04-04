@@ -1,4 +1,5 @@
 using Distributed
+using Random
 
 @everywhere begin
     import Pkg
@@ -21,12 +22,13 @@ function main()
 
     total = PidnebesnaDataset(data_dir) |> length
     ds = PidnebesnaDataset(data_dir) |> load!
-    method = Methods.SimpleMethod("SimpleMethod", "v1")
-    #method = Methods.IHMethod()
-    p = ProgressMeter.Progress(total)
+    #method = Methods.SimpleMethod("SimpleMethod", "v1")
+    method = Methods.IHMethod()
+    #p = ProgressMeter.Progress(total)
+    p = ProgressMeter.Progress(10)
     all_instances = ds |> collect
-    Threads.@threads for instance in all_instances
-        process(instance, method, result_dir; nruns=5)
+    Threads.@threads for i in 1:10
+        process(all_instances[i], method, result_dir; nruns=5)
         ProgressMeter.next!(p)
     end
 

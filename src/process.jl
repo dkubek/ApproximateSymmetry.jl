@@ -138,29 +138,6 @@ function write_permutation(
         return filename
 end
 
-
-#function write_metrics(
-#        solutions::Vector{Solution{T}},
-#        filename::String
-#)::String where {T<:Number}
-#        all_metrics = Vector{Dict{Symbol,Any}}(undef, length(solutions))
-#
-#        for (i, solution) in enumerate(solutions)
-#                all_metrics[i] = get_metrics(solution)
-#        end
-#
-#        metrics_df = DataFrame(all_metrics)
-#
-#        try
-#                CSV.write(filename, metrics_df)
-#        catch e
-#                @error "Failed to write metrics file" filename exception = e
-#                rethrow(e)
-#        end
-#
-#        return filename
-#end
-
 function write_metrics(
         solutions::Vector{Solution{T}},
         filename::String
@@ -174,29 +151,60 @@ function write_metrics(
                 union!(all_keys, keys(get_metrics(solution)))
         end
 
+        # Convert to sorted array for consistent ordering
+        sorted_keys = sort!(collect(all_keys))
+
         # Pre-allocate column vectors
         for key in all_keys
                 column_data[key] = Vector{Any}(undef, n)
         end
 
-        # Fill the columns
-        for (i, solution) in enumerate(solutions)
-                metrics = get_metrics(solution)
-                for key in all_keys
-                        column_data[key][i] = get(metrics, key, missing)
-                end
-        end
+        # Preallocate a single buffer for string construction
+        # Use IOBuffer instead of string concatenation
+        io_buffer = IOBuffer()
 
-        # Create DataFrame directly from columns (more efficient)
+        # # Fill the columns
+        # for (i, solution) in enumerate(solutions)
+        #         metrics = get_metrics(solution)
+        #         for key in all_keys
+        #                 column_data[key][i] = get(metrics, key, missing)
+        #         end
+        # end
+
+        # # Create DataFrame directly from columns (more efficient)
+        # open(filename, "w") do io
+        #         header = join(String.(collect(all_keys)), ",") * "\n"
+        #         write(io, header)
+
+        #         for i in 1:n
+        #                 row = join([string(column_data[key][i]) for key in all_keys], ",") * "\n"
+        #                 write(io, row)
+        #         end
+        # end
+
         open(filename, "w") do io
-                header = join(String.(collect(all_keys)), ",") * "\n"
-                write(io, header)
+                # Write header only once
+                for (i, key) in enumerate(sorted_keys)
+                        i > 1 && write(io_buffer, ',')
+                        write(io_buffer, string(key))
+                end
+                write(io_buffer, '\n')
+                write(io, String(take!(io_buffer)))
 
-                for i in 1:n
-                        row = join([string(column_data[key][i]) for key in all_keys], ",") * "\n"
-                        write(io, row)
+                # Write rows
+                for solution in solutions
+                        metrics = get_metrics(solution)
+                        for (i, key) in enumerate(sorted_keys)
+                                i > 1 && write(io_buffer, ',')
+                                value = get(metrics, key, missing)
+                                write(io_buffer, string(value))
+                        end
+                        write(io_buffer, '\n')
+                        write(io, String(take!(io_buffer)))
                 end
         end
+
+
 
         return filename
 end

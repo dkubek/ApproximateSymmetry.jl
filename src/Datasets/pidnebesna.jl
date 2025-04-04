@@ -47,18 +47,16 @@ function load!(instance::PidnebesnaSimulation{T}) where {T<:Real}
     #         n_nodes = parse(Int, n_nodes_match.captures[1])
     # end
 
-
-    sim_key = string(instance.simulation_index)
-    data = NPZ.npzread(instance.path, [sim_key])
-    matrix = convert(Matrix{T}, data[sim_key])
+    # Use String interning to avoid string allocation
+    sim_key = Symbol(instance.simulation_index)
+    matrix_data = NPZ.npzread(instance.path, [string(sim_key)])
+    instance.matrix = Matrix{T}(matrix_data[string(sim_key)])
+    instance.loaded = true
 
     # Verify matrix dimensions
     #if n_nodes > 0 && size(matrix, 1) != n_nodes
     #        @warn "Matrix dimensions ($(size(matrix, 1))) do not match expected size ($n_nodes) for simulation $sim_key in $base_name"
     #end
-
-    instance.matrix = matrix
-    instance.loaded = true
 
     return instance
 end
