@@ -5,7 +5,7 @@ using Reexport
 include("Common/Common.jl")
 @reexport using .Common
 
-include("Instances/Instances.jl")
+include("Instances.jl")
 @reexport using .Instances
 
 include("Solutions/Solutions.jl")
@@ -25,7 +25,7 @@ export solve, adjacency, process_dataset
 
 # CLI entry point
 function main()
-	CLI.main()
+        CLI.main()
 end
 
 end # module
