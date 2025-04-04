@@ -22,6 +22,7 @@ ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [compat]
 ArgParse = "1.2.0"
@@ -42,3 +43,4 @@ ProgressMeter = "1.10.2"
 Reexport = "1.2.2"
 Revise = "3.7.3"
 SparseArrays = "1.11.0"
+ZipFile = "0.10.1"

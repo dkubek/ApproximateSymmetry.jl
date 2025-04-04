@@ -20,6 +20,7 @@ function process(
         # @info "Processing" instance.id
         solutions = solve_task(instance, method, T; nruns=nruns)
         write_solution_files(instance, method, solutions, result_dir)
+        unload!(instance)
         return nothing
 end
 
@@ -28,8 +29,7 @@ function solve_task(
         method::AbstractMethod,
         ::Type{T}=Float64;
         nruns=1
-)::Vector{Solution{T}} where {T<:Number}
-
+) where {T<:Real}
         solutions = Vector{Solution{T}}(undef, nruns)
         for i in eachindex(solutions)
                 solutions[i] = Methods.solve(method, instance)
@@ -119,47 +119,83 @@ function write_permutation(
         n = size(solutions |> first |> get_result, 1)
         num_solutions = length(solutions)
 
-        # Pre-allocate for better performance
-        permutation_matrix = Matrix{Int}(undef, n, num_solutions)
+        buffer = Vector{Int}(undef, n)
 
-        # Extract permutations efficiently
-        for (sol_idx, solution) in enumerate(solutions)
-                P = get_result(solution)
+        open(filename, "w") do io
+                # Write CSV line
                 for i in 1:n
-                        permutation_matrix[i, sol_idx] = findfirst(x -> x == 1, view(P, i, :)) - 1
-                end
-        end
+                        # Extract this row across all solutions
+                        for (sol_idx, solution) in enumerate(solutions)
+                                P = get_result(solution)
+                                buffer[sol_idx] = findfirst(x -> x == 1, view(P, i, :)) - 1
+                        end
 
-        try
-                open(filename, "w") do io
-                        writedlm(io, permutation_matrix, ',')
+                        line = join(buffer, ',') * '\n'
+                        write(io, line)
                 end
-        catch e
-                @error "Failed to write permutation file" filename exception = e
-                rethrow(e)
         end
 
         return filename
 end
 
 
+#function write_metrics(
+#        solutions::Vector{Solution{T}},
+#        filename::String
+#)::String where {T<:Number}
+#        all_metrics = Vector{Dict{Symbol,Any}}(undef, length(solutions))
+#
+#        for (i, solution) in enumerate(solutions)
+#                all_metrics[i] = get_metrics(solution)
+#        end
+#
+#        metrics_df = DataFrame(all_metrics)
+#
+#        try
+#                CSV.write(filename, metrics_df)
+#        catch e
+#                @error "Failed to write metrics file" filename exception = e
+#                rethrow(e)
+#        end
+#
+#        return filename
+#end
+
 function write_metrics(
         solutions::Vector{Solution{T}},
         filename::String
-)::String where {T<:Number}
-        all_metrics = Vector{Dict{Symbol,Any}}(undef, length(solutions))
+) where {T<:Number}
+        n = length(solutions)
+        column_data = Dict{Symbol,Vector}()
 
-        for (i, solution) in enumerate(solutions)
-                all_metrics[i] = get_metrics(solution)
+        # Collect all possible keys
+        all_keys = Set{Symbol}()
+        for solution in solutions
+                union!(all_keys, keys(get_metrics(solution)))
         end
 
-        metrics_df = DataFrame(all_metrics)
+        # Pre-allocate column vectors
+        for key in all_keys
+                column_data[key] = Vector{Any}(undef, n)
+        end
 
-        try
-                CSV.write(filename, metrics_df)
-        catch e
-                @error "Failed to write metrics file" filename exception = e
-                rethrow(e)
+        # Fill the columns
+        for (i, solution) in enumerate(solutions)
+                metrics = get_metrics(solution)
+                for key in all_keys
+                        column_data[key][i] = get(metrics, key, missing)
+                end
+        end
+
+        # Create DataFrame directly from columns (more efficient)
+        open(filename, "w") do io
+                header = join(String.(collect(all_keys)), ",") * "\n"
+                write(io, header)
+
+                for i in 1:n
+                        row = join([string(column_data[key][i]) for key in all_keys], ",") * "\n"
+                        write(io, row)
+                end
         end
 
         return filename

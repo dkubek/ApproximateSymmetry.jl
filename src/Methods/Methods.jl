@@ -39,7 +39,6 @@ include("objective_function.jl")
 
 include("simple_method.jl")
 include("irwin_hall.jl")
-include("nonconvex_relaxation.jl")
 
 export AbstractMethod, MethodParameters, solve, supported_metrics
 

@@ -17,9 +17,6 @@ include("Methods/Methods.jl")
 include("Datasets/Datasets.jl")
 @reexport using .Datasets
 
-include("CLI/CLI.jl")
-using .CLI
-
 # Convenience re-exports
 export solve, adjacency, process_dataset
 

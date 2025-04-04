@@ -38,9 +38,7 @@ function load!(instance::PidnebesnaSimulation{T}) where {T<:Real}
     if instance.loaded
         return instance
     end
-
-    data = NPZ.npzread(instance.path)
-
+    #
     # Extract number of nodes if available in filename
     # FIXME: Extract other statistics as well
     # n_nodes = 0
@@ -49,14 +47,9 @@ function load!(instance::PidnebesnaSimulation{T}) where {T<:Real}
     #         n_nodes = parse(Int, n_nodes_match.captures[1])
     # end
 
+
     sim_key = string(instance.simulation_index)
-
-    # Check if this simulation exists
-    if !haskey(data, sim_key)
-        @error "The NPZ file $(instance.path) does not contain simulation index $(instance.simulation_index)"
-    end
-
-    # Get matrix for this simulation
+    data = NPZ.npzread(instance.path, [sim_key])
     matrix = convert(Matrix{T}, data[sim_key])
 
     # Verify matrix dimensions
@@ -67,6 +60,14 @@ function load!(instance::PidnebesnaSimulation{T}) where {T<:Real}
     instance.matrix = matrix
     instance.loaded = true
 
+    return instance
+end
+
+function unload!(instance::PidnebesnaSimulation)
+    if instance.loaded
+        instance.matrix = nothing
+        instance.loaded = false
+    end
     return instance
 end
 
@@ -208,4 +209,4 @@ end
 Base.eltype(::Type{PidnebesnaDataset}) = PidnebesnaSimulation
 
 
-export PidnebesnaSimulation, adjacency, load!, PidnebesnaDataset, load!
+export PidnebesnaSimulation, adjacency, load!, PidnebesnaDataset, load!, unload!
