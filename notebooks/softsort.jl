@@ -122,23 +122,13 @@ A = adjacency(instance)
 # ╔═╡ cdca8d34-9c11-4d7c-9b0c-d4449e241957
 A |> heatmap
 
-# ╔═╡ 0d8ed925-4fc0-4c95-9b7d-a65e12eaa90b
-# ╠═╡ disabled = true
-#=╠═╡
-sol = let
-	n = size(A, 1)
-	optimize(A, 0.2 * ones(n))
-end
-  ╠═╡ =#
-
-# ╔═╡ a7554d3d-d274-4339-9826-6f8d5db33d1f
-# ╠═╡ disabled = true
-#=╠═╡
-P = Hungarian.munkres(- sol.u |> softsort) .== 2
-  ╠═╡ =#
-
 # ╔═╡ 06d4d369-6c94-47c0-bbe5-a8a609665115
 1000:5:20000 |> collect
+
+# ╔═╡ a85f9a74-6ecb-43ef-a2be-0bf2855a66e3
+begin
+	@unpack c, τ = scenario
+end
 
 # ╔═╡ 07763fd6-e698-4a79-8281-1f9b08fd0279
 begin
@@ -152,13 +142,8 @@ B = Iterators.filter(ds) do instance
 	contains(instance.id, "nNodes100")
 end |> first |> adjacency
 
-# ╔═╡ 1871705c-a4f3-4510-b1b0-da9056d0ee05
-sol = let
-	n = size(B, 1)
-	optimize(B, 0.2 * ones(n), τ=τ_best)
-end
-
 # ╔═╡ c3a3a6bd-d2ac-46aa-880b-2e2260dc2b70
+#=╠═╡
 function annealing(A, c;
 	x0=nothing,
 	τ_init=0.1, τ_final=0.0001, annealing_steps=5,
@@ -181,12 +166,12 @@ function annealing(A, c;
 	
 	return sol
 end
+  ╠═╡ =#
 
 # ╔═╡ 45d1147e-1f34-488a-9a19-7d54cc5937d0
+#=╠═╡
 sol.u |> softsort
-
-# ╔═╡ d83686a4-aa08-4fe0-a2a0-ef893d49d078
-P = Hungarian.munkres(- sol.u |> softsort) .== 2
+  ╠═╡ =#
 
 # ╔═╡ 3a9cb567-2f97-47a4-8123-3abe55488a1f
 P_anneal = let
@@ -195,7 +180,9 @@ P_anneal = let
 end
 
 # ╔═╡ 7ee2b63d-de6a-4342-8acb-60905dcc09e0
+#=╠═╡
 sol.stats.time
+  ╠═╡ =#
 
 # ╔═╡ 58581ed0-eecb-4ac8-be1c-485e3e02697a
 function soft_sort(s, tau)
@@ -236,7 +223,9 @@ function soft_sort(s, tau)
 end
 
 # ╔═╡ 9502c291-9810-4fc7-ac16-e1113439ea67
+#=╠═╡
 soft_sort(sol.u, 0.1)
+  ╠═╡ =#
 
 # ╔═╡ 95f8d43c-f0db-40ac-be8b-a1b30e9191e2
 md"""
@@ -253,6 +242,7 @@ function method_softsort(A::AbstractMatrix)
 end
 
 # ╔═╡ 2f9d696c-9d18-4518-b32b-15a8ec52306f
+#=╠═╡
 function method_anneal(A::AbstractMatrix)
 	n = size(A, 1)
 	sol = annealing(A, 0.2 * ones(n))
@@ -260,6 +250,7 @@ function method_anneal(A::AbstractMatrix)
 	P = Hungarian.munkres(- sol.u |> softsort) .== 2
 	P, sol.stats.time
 end
+  ╠═╡ =#
 
 # ╔═╡ e7e48338-9d05-481a-a86a-84979771f576
 E(A, P) = 1/4 * norm(A - P * A * P', 1)
@@ -342,13 +333,38 @@ begin
 	display(history(scenario))
 end
 
-# ╔═╡ a85f9a74-6ecb-43ef-a2be-0bf2855a66e3
-begin
-	@unpack c, τ = scenario
-end
-
 # ╔═╡ 66aa1350-cc08-4c37-a2e4-bba772493eb4
+#=╠═╡
 E(B, P)
+  ╠═╡ =#
+
+# ╔═╡ 1871705c-a4f3-4510-b1b0-da9056d0ee05
+#=╠═╡
+sol = let
+	n = size(B, 1)
+	optimize(B, 0.2 * ones(n), τ=τ_best)
+end
+  ╠═╡ =#
+
+# ╔═╡ a7554d3d-d274-4339-9826-6f8d5db33d1f
+# ╠═╡ disabled = true
+#=╠═╡
+P = Hungarian.munkres(- sol.u |> softsort) .== 2
+  ╠═╡ =#
+
+# ╔═╡ 0d8ed925-4fc0-4c95-9b7d-a65e12eaa90b
+# ╠═╡ disabled = true
+#=╠═╡
+sol = let
+	n = size(A, 1)
+	optimize(A, 0.2 * ones(n))
+end
+  ╠═╡ =#
+
+# ╔═╡ d83686a4-aa08-4fe0-a2a0-ef893d49d078
+#=╠═╡
+P = Hungarian.munkres(- sol.u |> softsort) .== 2
+  ╠═╡ =#
 
 # ╔═╡ Cell order:
 # ╠═28275e76-80c9-4c32-be2a-1d747bd4e575
